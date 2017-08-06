@@ -30,6 +30,7 @@ from ansible.compat.six import text_type, binary_type
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.path import unfrackpath, makedirs_safe
 from ansible.utils.unicode import to_bytes, to_unicode, to_str
+from ansible.module_utils._text import to_bytes, to_text as to_unicode
 
 try:
     from __main__ import display
@@ -49,7 +50,9 @@ class Connection(ConnectionBase):
 
     def _connect(self):
         ''' connect to the lxc; nothing to do here '''
-        display.vvv('XXX connect')
+        display.vvv('XXX connect'+'\n'.join(dir(self._play_context)))
+        display.vvv(self._play_context.remote_user)
+
         super(Connection, self)._connect()
         #self.container_name = self.ssh._play_context.remote_addr
         self.container_name = self._play_context.ssh_extra_args # XXX
@@ -136,11 +139,12 @@ class Connection(ConnectionBase):
                 )
             )
         user = self._play_context.remote_user
-        if user:
-            self._add_args(
-                "ANSIBLE_REMOTE_USER/remote_user/ansible_user/user/-u set",
-                ("-o", "User={0}".format(to_bytes(self._play_context.remote_user)))
-            )
+        #if user:
+        #    self._add_args(
+        #        "ANSIBLE_REMOTE_USER/remote_user/ansible_user/user/-u set",
+        #        ("-o", "User={0}".format(to_bytes(self._play_context.ssh_extra_args)))
+        #    )
+        self._add_args('make it right',('-o','User={0}'.format(to_bytes(self._play_context.ssh_extra_args))))
         self._add_args(
             "ANSIBLE_TIMEOUT/timeout set",
             ("-o", "ConnectTimeout={0}".format(self._play_context.timeout))
@@ -526,7 +530,7 @@ class Connection(ConnectionBase):
         #print( vm )
         #raise "blah"
         h = self.container_name
-        lxc_cmd = 'lxc-attach --name %s -- /bin/sh -c %s'  \
+        lxc_cmd = 'lxc-attach --name %s --clear-env -- /bin/sh -c %s'  \
                 % (pipes.quote(h),
                    pipes.quote(cmd))
         if in_data:
